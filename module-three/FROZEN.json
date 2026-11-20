@@ -1,0 +1,10 @@
+{
+  "name": "整套附图生成 E31｜用户认可冻结版",
+  "rulesRevision": "E31-all-category-trace-audit-20261026",
+  "status": "frozen-user-authorized-production",
+  "releaseDirectory": "/Users/manrongdu/Documents/ChatGPT/车灯生图系统完整版/releases/listing-e31-20261026",
+  "archiveSHA256": "69c41ee20caccb99c2df3ac3211463c58a34ce97b12b89c54fc1a4d5e6a847b2",
+  "url": "http://127.0.0.1:8775/",
+  "changePolicy": "Frozen baseline; future enhancements must use a separate candidate and require explicit user instruction before replacing this baseline",
+  "uiPatch": "listing-e31-ui1-20261026"
+}

@@ -1,0 +1,47 @@
+name: V1 Linux deployment validation
+on:
+  push:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify delivery manifest
+        run: |
+          sha256sum -c FILES.sha256
+      - name: Build isolated Linux image
+        run: docker build -t car-light-proxy:test .
+      - name: Offline tests (no real API requests)
+        run: docker run --rm -e SYSTEM_BUDGET=0 --entrypoint python3 car-light-proxy:test scripts/check.py
+      - name: Linux image and OCR boundaries
+        run: docker run --rm --entrypoint python3 car-light-proxy:test scripts/linux_smoke.py
+      - name: Start three services and check ingress
+        run: |
+          mkdir -p secrets
+          printf '%s\n' '{"baseUrl":"http://127.0.0.1:9/v1","apiKey":"TEST_NOT_A_REAL_KEY","model":"gpt-image-2.6"}' > secrets/image-proxy.json
+          docker run -d --name car-test -e PUBLIC_ORIGIN=https://images.example.com -e IMAGE_PROXY_CONFIG=/run/secrets/image_proxy.json -v "$PWD/secrets/image-proxy.json:/run/secrets/image_proxy.json:ro" car-light-proxy:test
+          for i in $(seq 1 30); do
+            if docker exec car-test python3 deploy/healthcheck.py; then break; fi
+            sleep 2
+          done
+          docker exec car-test python3 deploy/healthcheck.py
+          docker exec car-test python3 scripts/http_smoke.py --prepare
+          docker restart car-test
+          for i in $(seq 1 30); do
+            if docker exec car-test python3 deploy/healthcheck.py; then break; fi
+            sleep 2
+          done
+          docker exec car-test python3 deploy/healthcheck.py
+          docker exec car-test python3 scripts/http_smoke.py --verify
+      - name: Validate HTTPS gateway configuration
+        run: |
+          docker run --rm caddy:2.10.2-alpine caddy version
+          printf '%s\n' 'tester $2a$14$WC8I0PCqZ6g3R5x0iQYzQezy5U9vD5zJj7nG8qI7.SNdShMCHWQre' > secrets/access
+          docker run --rm -e DOMAIN=images.example.com -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" -v "$PWD/secrets/access:/run/secrets/access:ro" caddy:2.10.2-alpine caddy validate --config /etc/caddy/Caddyfile
+      - name: Logs on failure
+        if: failure()
+        run: docker logs car-test || true

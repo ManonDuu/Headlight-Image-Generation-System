@@ -1,0 +1,115 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: blob:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'none'; form-action 'none'"><title>图片重构 · 第一模块</title><style>
+*{box-sizing:border-box}body{background:#101820;color:#eef4f7;font:16px/1.6 system-ui;margin:0}main{max-width:1150px;margin:auto;padding:28px}h1{font-size:30px}h2{font-size:20px}section{background:#1a2935;border-radius:12px;padding:20px;margin:18px 0}.muted{color:#aec1cf}label{display:block;margin:10px 0}textarea,select,input[type=text]{width:100%;padding:10px;background:#0f1b25;color:white;border:1px solid #58717f;border-radius:5px}button,.download{display:inline-block;background:#245b52;color:white;border:1px solid #80beac;border-radius:6px;padding:10px 16px;margin:8px 8px 8px 0;cursor:pointer}button:disabled{opacity:.4;cursor:not-allowed}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}img{width:100%;max-height:700px;object-fit:contain;background:#101820}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.6 monospace}.warn{border-left:4px solid #e7b56c;padding:12px;background:#343027}#status{position:sticky;top:0;background:#14272a;padding:12px;z-index:1}details{margin:15px 0}@media(max-width:700px){.grid{grid-template-columns:1fr}}
+</style></head><body><main><p class="muted">本地图片重构 / 第一模块</p><h1>导入、冻结、单张结果与验收</h1><p>本页完全离线，不接收密钥，不上传图片。付费请求由受控本地入口执行。</p><div id="status" aria-live="polite">新任务：未冻结</div>
+<section><h2>上次已批准尝试</h2><pre id="previous">状态：stopped
+批准：已消费，不可复用
+结果：未知：未保存成功响应，不能推断未计费
+图片：无可验收的生成图片
+验收：无法开展：缺少成功生成结果
+连接：基础 HTTPS 可达；账户与模型权限未测</pre><p class="warn">原批准已消费；不重放、不清除账本。历史参考样例不是本次生成结果。</p></section>
+<section><h2>1 · 导入与文案模式</h2><label>参考图片（JPEG，最多 4 MB）<input id="source" type="file" accept="image/jpeg"></label><label>沿用已确认的文案模式<select id="mode"><option value="no-copy">去营销文字，保留功能标注</option><option value="custom">自定义文案逐字保留</option></select></label><label>自定义文案（仅自定义模式使用）<textarea id="copy" rows="3" placeholder="保留大小写，只允许必要换行"></textarea></label><label>本图区域、功能标注与位置合同<textarea id="geometry" rows="5" placeholder="原已冻结参考图自动填入；其他图片需填写可复核位置和保留标注，不套用五区域模板"></textarea></label><label>同类场景具体变化<textarea id="scene" rows="3"></textarea></label><div class="grid"><div><img hidden id="sourceImage" alt="尚未导入参考图"></div><div><p id="sourceInfo" class="muted">素材仅留在本页内存；导出任务后可本地保存。</p><p>保留构图、视角、层级和证明关系；场景细节明显变化。不得为差异数量强行改变对象/机位，不补造光束，不靠后期提亮掩盖问题。</p><p>字体以原图近似匹配；非精确字体文件复现。新参考图需独立冻结位置，不能套用旧图几何。</p></div></div></section>
+<section><h2>2 · 冻结输入与费用</h2><p>Gemini 3.1 Flash Image · 2K / 4:5 · minimal · 4096 输出 tokens · 每任务一次，零重试。</p><p>输入文字最多 2560 UTF-8 字节，图片 high 约1120 tokens，封装留416 tokens。保守输入预留4096；总估算包络 $0.247808，建议单次预算 $0.26。不是服务端美元硬限额；新任务不会继承旧批准。</p><button id="freeze">冻结本次输入</button><button id="export" disabled>保存冻结任务包</button><details><summary>完整请求文字和参数</summary><pre id="requestView">未冻结</pre></details></section>
+<section><h2>3 · 单次执行与结果读取</h2><p>离线模拟只验证状态流转，不生成图片。真实执行须由本地受控入口提供凭据和新的有限批准；本页面没有付费连接能力。</p><button id="mockOK" disabled>模拟成功（不生图）</button><button id="mockFail" disabled>模拟失败即停</button><button disabled>直接付费调用未连接</button><label>读取该任务的原始 response.json（仅本地，最多 30 MB）<input id="response" type="file" accept="application/json" disabled></label><p class="muted">读取器核对 completed、模型、单张PNG、usage和尺寸。响应文件缺少请求绑定信息，须由操作员确认来自当前冻结任务；不能仅凭文件认定其来源。</p><label><input id="binding" type="checkbox"> 我确认该响应属于当前冻结请求，而非历史样例或另一任务</label><div id="resultArea"><p>没有真实结果；没有可保存或验收的生成图。</p></div></section>
+<section><h2>4 · 人工验收</h2><p>分别检查缩略图结构/卖点相似、并排场景差异、文案/字体/位置、亮度/光束/证明关系。生成成功不代表合格。</p><label>结论<select id="verdict" disabled><option value="rejected">不通过</option><option value="accepted">通过</option></select></label><label>逐项依据<textarea id="notes" rows="4" disabled></textarea></label><button id="review" disabled>记录人工结论</button><button id="saveReview" disabled>保存验收记录</button><p id="acceptance">未评估</p></section>
+<p class="warn">刷新页面会丢失未导出的本页任务；请保存任务包与验收记录。导出不会授予执行权限。旧的 stopped 尝试仍在磁盘账本中，页面刷新不会重置它。</p>
+</main><script>// Single source for the local preview and request builder. DRAFT, not historical prompt.
+var FROZEN = {
+  version: 'reference-81g-draft-02', approved: false,
+  reference: {path:'assets/81gMZuoRq6L._AC_SL1500_.jpg', width:1200,height:1500,sha256:'d8b87596d3ea2218154b03abafd55333a8f46aa7fcdaca0f53fb63239c2d73ef'},
+  example: {path:'assets/exec-2f5b9ebc-8a90-43e8-aaf9-c4a4c0117844.png',scope:'仅结构相似与场景差异程度；文字、字体及间距不作为合格示例'},
+  geometryMethod:'人工查看本地原图后按 1200×1500 像素坐标估读；不是自动检测或历史精确合同。框边约 ±10px，仅定位草稿，不是验收容差。',
+  regions:[
+    {id:'hero',name:'主雨景',box:[0,0,1200,1045],note:'蓝色 SUV，前方三分之四视角，雨夜城市道路；文字覆盖其上'},
+    {id:'rain',name:'雨天卡片',box:[60,1051,528,191],note:'左上，车辆在左，雨图标与文字在右'},
+    {id:'snow',name:'雪天卡片',box:[607,1051,528,191],note:'右上，车辆在左，雪图标与文字在右'},
+    {id:'fog',name:'雾天卡片',box:[60,1261,528,191],note:'左下，车辆在左，雾图标与文字在右'},
+    {id:'dust',name:'尘土卡片',box:[607,1261,528,191],note:'右下，车辆在左，尘土图标与文字在右'}
+  ],
+  text:[
+    {text:'IP68 WATERPROOF',box:[238,77,735,62],kind:'营销标题',action:'本次拟删除',font:'无衬线重粗体；具体字体未知；预览近似 Arial Black，约 70px'},
+    {text:'Not Blinding Oncoming Drivers',box:[320,164,563,36],kind:'营销副标题',action:'本次拟删除',font:'无衬线粗体；预览近似 Arial Bold，约 39px'},
+    {text:'-40°C',box:[69,989,111,37],kind:'功能温度刻度',action:'原文保留，不改为 cold',font:'Arial Bold 约 39px，仅近似'},
+    {text:'+80°C',box:[991,989,116,37],kind:'功能温度刻度',action:'原文保留，不改为 warm',font:'Arial Bold 约 39px，仅近似'},
+    {text:'Rainy',box:[455,1182,107,40],kind:'天气标签',action:'逐字保留大小写',font:'Arial Bold 约 38px，仅近似'},
+    {text:'Snowy',box:[985,1182,130,40],kind:'天气标签',action:'逐字保留大小写',font:'Arial Bold 约 38px，仅近似'},
+    {text:'Foggy',box:[452,1387,116,40],kind:'天气标签',action:'逐字保留大小写',font:'Arial Bold 约 38px，仅近似'},
+    {text:'Dusty',box:[993,1387,114,40],kind:'天气标签',action:'逐字保留大小写',font:'Arial Bold 约 38px，仅近似'}
+  ],
+  temperatureBar:[191,976,779,51],
+  mode:'no-marketing-copy; retain functional labels verbatim',
+  modeSelection:'UNCONFIRMED PROPOSAL for this test; historical approval defines this optional mode but does not select it for this image',
+  proposal:'银灰 SUV；河岸仓库和桥梁雨景；天气卡片更换车辆细节与具体环境；保持区域、视角、气候关系、光束方向及阅读顺序。',
+  missing:['原 02C 提示词未恢复：使用明确标记的新草稿','原字体无法从位图确证；拟保留视觉字形，Arial Bold 仅作预览近似','框位来自人工估读，尚待本次冻结确认；不冒充历史已批准几何值'],
+  call:{model:'gemini-3.1-flash-image',endpoint:'https://generativelanguage.googleapis.com/v1beta/interactions',imageSize:'2K',aspectRatio:'4:5',expectedWidth:1856,expectedHeight:2304,maxOutputTokens:4096,thinkingLevel:'minimal',requests:1,retries:0,timeoutSeconds:180,requestImages:1,acceptedImageCount:1,budgetMicroUSD:260000,conservativeMicroUSD:247808,realEnabled:false},
+  prompt:[
+    'Create exactly ONE reconstructed image using the attached original image as the visual reference. This is a new implementation prompt, not a recovered 02C prompt.',
+    'Use 4:5 portrait, 2K. Preserve the original composition, reading order, subject categories, camera viewpoint, hierarchy, region functions and proof relationships. The layout is one large rainy hero scene plus FOUR weather cards in a 2 by 2 grid. Never use three cards.',
+    'Coordinates below are frozen draft anchors in a 1200 by 1500 reference canvas; scale proportionally to the output. Hero [0,0,1200,1045]; rain [60,1051,528,191]; snow [607,1051,528,191]; fog [60,1261,528,191]; dust [607,1261,528,191]. Boxes are x,y,width,height. Temperature bar [191,976,779,51]. Preserve the card borders, spacing, icon placement and hierarchy. Do not redesign or move regions.',
+    'No marketing copy: remove IP68 WATERPROOF and Not Blinding Oncoming Drivers without filling that area with a new title or moving the vehicle/cards upward. Remove visible vehicle brand badges and marketing watermarks. Keep the functional temperature bar and exact labels -40°C and +80°C; keep exact weather labels Rainy, Snowy, Foggy, Dusty with original case and positions. No cold/warm substitutions, no new claims, no extra text.',
+    'Preserve functional label visual weight, angle and spacing from the original reference. Font identity is unknown; use visually matching bold sans-serif. Only minimal readability repairs are permitted; do not move labels subjectively or substantially alter layout.',
+    'Change concrete scene content obviously at first glance: a silver-grey SUV in the hero scene, a rainy riverside warehouse and bridge environment, different vehicle details, wheels, surroundings, road materials and weather textures in the four cards. Keep subject category and viewpoint. These vehicles are weather-scene carriers. Preserve rain, snow, fog and dust expression and the visible lighting direction/range; do not invent brighter beams or comparative advantages.',
+    'Do not copy the original scene unchanged, but do not remake the topic or composition. Both reduced-view structural similarity and side-by-side obvious scene difference are required. Do not post-brighten to rescue an inadequate result. Return one final PNG image only, without explanation or additional variations.'
+  ].join('\n')
+};
+
+// Pure, synchronous adapter. No network, filesystem, environment or credentials.
+var Provider = (function () {
+  function assert(ok, why) { if (!ok) throw new Error(why); }
+  function request(f, image64) {
+    assert(f.call.model === 'gemini-3.1-flash-image', 'model-changed');
+    assert(f.call.maxOutputTokens === 4096 && f.call.requests === 1 && f.call.retries === 0, 'policy-changed');
+    assert(f.call.imageSize === '2K' && f.call.aspectRatio === '4:5', 'format-changed');
+    assert(typeof image64 === 'string' && /^[A-Za-z0-9+/]+={0,2}$/.test(image64), 'invalid-image');
+    return {model:f.call.model, store:false, input:[{type:'text',text:f.prompt},{type:'image',mime_type:'image/jpeg',resolution:'high',data:image64}],
+      response_format:{type:'image',mime_type:'image/png',image_size:'2K',aspect_ratio:'4:5'},
+      generation_config:{max_output_tokens:4096,thinking_level:'minimal'}};
+  }
+  function parse(response) {
+    assert(response.http === 200, 'http-' + response.http);
+    var body = typeof response.body === 'string' ? JSON.parse(response.body) : response.body;
+    assert(body.model === 'gemini-3.1-flash-image', 'unexpected-model');
+    assert(body.status === 'completed', 'incomplete-or-blocked');
+    assert(Array.isArray(body.steps), 'missing-steps');
+    var images=[];
+    body.steps.forEach(function(step) {
+      if (step.type === 'model_output') (step.content || []).forEach(function(c) { if(c.type === 'image') images.push(c); });
+    });
+    assert(images.length === 1, 'image-count-' + images.length);
+    assert(images[0].mime_type === 'image/png' && typeof images[0].data === 'string' && /^iVBORw0KGgo[A-Za-z0-9+/]*={0,2}$/.test(images[0].data), 'invalid-png');
+    return {state:'generated-pending-review',visualAcceptance:'not-evaluated',image:images[0],usage:body.usage || null};
+  }
+  function execute(task, transport, requestBody, budget) {
+    assert(task.state === 'planned' && !task.attempted, 'already-attempted');
+    assert(Number.isSafeInteger(budget) && budget >= 260000, 'budget-insufficient');
+    task.attempted=true; task.state='running'; task.calls=1;
+    try { var result=parse(transport(requestBody, {timeoutSeconds:180,retries:0})); task.state=result.state; return result; }
+    catch(e) { task.state='stopped'; throw e; }
+  }
+  return {request:request,parse:parse,execute:execute};
+}());
+
+var ModuleFlow={
+  newTask:function(){return {state:'draft',attempted:false,sourceHash:null,request:null,result:null,acceptance:'not-evaluated'};},
+  freeze:function(t,request,hash){if(t.state!=='draft')throw Error('任务已冻结');if(!hash||!request.input[1].data)throw Error('缺少素材');t.request=request;t.sourceHash=hash;t.state='frozen';},
+  mock:function(t,outcome){if(t.state!=='frozen'||t.attempted)throw Error('禁止重复执行');t.attempted=true;t.state=outcome==='success'?'mock-completed':'stopped';t.acceptance='not-evaluated';},
+  receive:function(t,response){if(t.state!=='frozen'||t.attempted)throw Error('此任务已执行；请勿覆盖记录');t.attempted=true;try{t.result=Provider.parse({http:200,body:response});t.state='generated-pending-review';}catch(e){t.state='stopped';throw e;}},
+  review:function(t,verdict,note){if(t.state!=='generated-pending-review')throw Error('没有真实结果可验收');if(['accepted','rejected'].indexOf(verdict)<0||!note.trim())throw Error('填写结论和依据');t.acceptance=verdict;t.reviewNote=note;}
+};
+
+var CURRENT_STATE={"capturedAt":"2026-10-17T04:41:08.490Z","state":"stopped","approval":"已消费，不可复用","localImage":"无可验收的生成图片","remoteResult":"未知：未保存成功响应，不能推断未计费","visualAcceptance":"无法开展：缺少成功生成结果","canRetry":false,"canAutoAccept":false,"showImage":false,"connection":"基础 HTTPS 可达；账户与模型权限未测"};
+'use strict';
+var task=ModuleFlow.newTask(),ref=null,resultURL=null;
+function el(id){return document.getElementById(id);}function status(s){el('status').textContent=s;}
+function save(name,content,type){var a=document.createElement('a'),u=URL.createObjectURL(new Blob([content],{type:type}));a.href=u;a.download=name;a.click();setTimeout(function(){URL.revokeObjectURL(u);},1000);}
+function locked(){['source','mode','copy','geometry','scene','freeze'].forEach(function(id){el(id).disabled=true;});}
+function consumed(){['mockOK','mockFail','response'].forEach(function(id){el(id).disabled=true;});}
+el('previous').textContent='状态：'+CURRENT_STATE.state+'\n批准：'+CURRENT_STATE.approval+'\n结果：'+CURRENT_STATE.remoteResult+'\n图片：'+CURRENT_STATE.localImage+'\n验收：'+CURRENT_STATE.visualAcceptance+'\n连接：'+CURRENT_STATE.connection;
+el('scene').value=FROZEN.proposal;
+el('source').onchange=async function(){try{var f=this.files[0];if(!f||f.type!=='image/jpeg'||f.size>4*1024*1024)throw Error('只接收最多4MB JPEG');var bytes=await f.arrayBuffer();var digest=await crypto.subtle.digest('SHA-256',bytes);var hash=Array.from(new Uint8Array(digest)).map(function(x){return x.toString(16).padStart(2,'0');}).join('');var data=await new Promise(function(resolve,reject){var r=new FileReader();r.onload=function(){resolve(r.result);};r.onerror=reject;r.readAsDataURL(f);});ref={name:f.name,hash:hash,data:data};el('sourceImage').src=data;el('sourceImage').hidden=false;el('sourceInfo').textContent=f.name+' · SHA-256 '+hash;if(hash===FROZEN.reference.sha256){el('geometry').value='原图1200×1500；主雨景[0,0,1200,1045]；雨[60,1051,528,191]；雪[607,1051,528,191]；雾[60,1261,528,191]；尘[607,1261,528,191]；温度条[191,976,779,51]。保留 -40°C、+80°C、Rainy、Snowy、Foggy、Dusty。';}else{el('geometry').value='';el('scene').value='';}status('已导入，待冻结');}catch(e){ref=null;status('导入失败：'+e.message);}};
+el('freeze').onclick=function(){try{if(!ref||!el('geometry').value.trim()||!el('scene').value.trim())throw Error('请导入图片并填写本图位置合同和场景变化');var mode=el('mode').value,copy=el('copy').value;if(mode==='custom'&&!copy.trim())throw Error('自定义模式须填写逐字文案');var prompt='Generate exactly one 2K portrait 4:5 reconstruction using the attached visual reference. Preserve composition, viewpoint, subject category, region functions, reading order and proof relationships. Change concrete scene content visibly without redesigning the layout or forcing category/camera changes. No invented light beams, comparative advantage or post-brightening rescue. Match original font appearance and positions; permit only minimal readability fixes. '+(mode==='no-copy'?'Remove marketing titles, brands and watermarks; retain required functional labels verbatim. Leave original layout space intact.':'Use this custom copy verbatim including case; only necessary line breaks: '+copy)+'\nFrozen geometry and labels: '+el('geometry').value+'\nScene changes: '+el('scene').value+'\nBoth reduced-view structural similarity and obvious side-by-side scene difference required. Return one PNG only.';if(new TextEncoder().encode(prompt).length>2560)throw Error('文字超过本预算2560字节预留，请精简后冻结');var f=JSON.parse(JSON.stringify(FROZEN));f.prompt=prompt;var req=Provider.request(f,ref.data.split(',')[1]);ModuleFlow.freeze(task,req,ref.hash);task.mode=mode;task.sourceName=ref.name;task.budgetMicroUSD=260000;task.authorization='none';el('requestView').textContent=JSON.stringify({model:req.model,prompt:prompt,response_format:req.response_format,generation_config:req.generation_config,sourceHash:ref.hash,budgetMicroUSD:260000},null,2);locked();['export','mockOK','mockFail','response'].forEach(function(id){el(id).disabled=false;});status('已冻结；尚未获得新任务付费授权');}catch(e){status(e.message);}};
+el('export').onclick=function(){save('reconstruction-task.json',JSON.stringify(task,null,2),'application/json');};
+['mockOK','mockFail'].forEach(function(id){el(id).onclick=function(){try{ModuleFlow.mock(task,id==='mockOK'?'success':'failure');consumed();status(task.state+' · 模拟请求=0，生图=0，费用=0');}catch(e){status(e.message);}};});
+el('response').onchange=async function(){try{if(!el('binding').checked)throw Error('先确认响应对应当前任务');var f=this.files[0];if(!f||f.size>30*1024*1024)throw Error('响应文件无效或过大');ModuleFlow.receive(task,JSON.parse(await f.text()));consumed();var u=task.result.usage;if(!u||!['total_input_tokens','total_output_tokens','total_thought_tokens','total_tokens'].every(function(k){return Number.isSafeInteger(u[k])&&u[k]>=0;}))throw Error('usage缺失或无效');var raw=atob(task.result.image.data),bytes=new Uint8Array(raw.length);for(var i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);var blob=new Blob([bytes],{type:'image/png'});resultURL=URL.createObjectURL(blob);var img=new Image();img.src=resultURL;await img.decode();if(img.naturalWidth!==1856||img.naturalHeight!==2304)throw Error('实际尺寸不符1856×2304');el('resultArea').replaceChildren(img);var a=document.createElement('a');a.className='download';a.href=resultURL;a.download='original-generated-output.png';a.textContent='保存未修改的原始PNG';el('resultArea').append(a);var p=document.createElement('pre');p.textContent='Usage: '+JSON.stringify(u,null,2);el('resultArea').append(p);['verdict','notes','review'].forEach(function(id){el(id).disabled=false;});status('已读取真实响应；待人工验收，未自动通过');}catch(e){if(task.attempted){task.state='stopped';consumed();}status('停止：'+e.message);}};
+el('review').onclick=function(){try{ModuleFlow.review(task,el('verdict').value,el('notes').value);el('acceptance').textContent=task.acceptance+'：'+task.reviewNote;el('saveReview').disabled=false;}catch(e){status(e.message);}};
+el('saveReview').onclick=function(){save('manual-review.json',JSON.stringify({sourceHash:task.sourceHash,acceptance:task.acceptance,note:task.reviewNote,usage:task.result.usage},null,2),'application/json');};
+</script></body></html>

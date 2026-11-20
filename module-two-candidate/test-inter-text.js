@@ -1,0 +1,17 @@
+(async()=>{
+const E=InterTextFoundation,F=ProductCanvasFoundation,P=CANVAS_TEST_POLICY;let checks=0;
+const ok=(x,m)=>{if(!x)throw Error(m);checks++;},reject=async f=>{let bad=false;try{await f();}catch(e){bad=true;}ok(bad,'expected explicit failure');};
+const blobs={};for(const [k,v]of Object.entries(INTER_FONT_BYTES))blobs[k]=new Blob([Uint8Array.from(atob(v),c=>c.charCodeAt(0))]);
+await reject(()=>E.load({normal:new Blob(['bad']),italic:blobs.italic}));const loaded=await E.load(blobs);ok(E.ready&&document.fonts.check('italic 600 20px '+E.family),'both faces ready');
+const base={text:'mIxEd LED H11 60W 6500K exact words',mode:'custom',role:'title',fontSize:20,weight:500,style:'normal',lineHeightPx:28,align:'left',box:{x:0,y:0,width:180,height:140}};
+let p=E.layout(base,P,F.copyText);ok(p.lines.length>1&&p.lines.join('')===base.text,'wrap preserves every custom character');ok(p.metrics.every(m=>m.width<=180)&&p.height<=140,'measured dimensions fit');
+const title=E.layout({...base,text:'INTEGRATED LED COOLING',mode:'ai-rewrite',box:{x:0,y:0,width:500,height:100}},P,F.copyText);ok(title.text==='Integrated LED Cooling','title role');
+const sub=E.layout({...base,text:'COOLING LED H11 60W',mode:'ai-rewrite',role:'subtitle',style:'italic',weight:650,align:'center',box:{x:0,y:0,width:500,height:100}},P,F.copyText);ok(sub.text==='Cooling LED H11 60W'&&sub.positions[0].x>0,'subtitle/italic/centering');
+const right=E.layout({...base,text:'Exact',align:'right',box:{x:10,y:0,width:300,height:100}},P,F.copyText);ok(right.positions[0].x>200,'right alignment');
+ok(E.layout({...base,text:'mIxEd BODY',role:'body',mode:'ai-rewrite'},P,F.copyText).text==='mIxEd BODY','body unchanged');
+await reject(()=>E.layout({...base,text:'HEADLIGHT'},P,F.copyText));await reject(()=>E.layout({...base,box:{x:0,y:0,width:10,height:50}},P,F.copyText));await reject(()=>E.layout({...base,box:{x:0,y:0,width:180,height:2}},P,F.copyText));await reject(()=>E.layout({...base,lineHeightPx:1},P,F.copyText));await reject(()=>E.layout({...base,scaleX:0.5},P,F.copyText));await reject(()=>E.layout({...base,text:'未验证字形'},P,F.copyText));
+const c=document.createElement('canvas');c.width=8;c.height=8;c.getContext('2d').fillRect(0,0,8,8);const src=await new Promise(r=>c.toBlob(r,'image/png'));const session=new F.Session({enabled:true,policy:P});await session.load(src,{sourceHash:await F.sha(src)});session.transform({x:280,y:170,scale:1,rotation:0});await session.layers({backgroundConfirmedClean:true,text:[{...base,box:{x:5,y:5,width:180,height:140}}]});const out=await session.exportPNG({width:320,height:200});ok(out.manifest.interReady&&out.manifest.textPlans[0].text===base.text,'actual independent text export');ok(out.manifest.textPlans[0].hashes.normal===loaded.hashes.normal,'font provenance in export');
+const bitmap=await createImageBitmap(out.blob),probe=document.createElement('canvas');probe.width=320;probe.height=200;probe.getContext('2d').drawImage(bitmap,0,0);const pixels=probe.getContext('2d').getImageData(0,0,220,150).data;ok(pixels.some((v,i)=>i%4===3&&v>0),'text pixels rendered');
+await session.layers({backgroundConfirmedClean:true,text:[{...base,box:{x:270,y:160,width:50,height:30},text:'X'}]});await reject(()=>session.exportPNG({width:320,height:200}));
+return {checks,loaded,fontMeasuredWidth:title.metrics[0].width,customLines:p.lines,exportHash:out.manifest.outputHash,fixtureOnly:true,productionEnabled:false,newModelCalls:0};
+})()

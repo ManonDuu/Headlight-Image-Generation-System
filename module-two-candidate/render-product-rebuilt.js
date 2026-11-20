@@ -1,0 +1,3 @@
+(async()=>{
+ const root='/diagnostics/product-rebuilt/',c=await(await fetch(root+'contract.json')).json(),p=await(await fetch(root+'proposal.json')).json(),scene=await(await fetch(root+'canbus-clean-rebuilt-background.png')).blob(),r=await DeterministicDecoration.render({contract:c,layout:p.layout,sourceHash:c.sourceHash,assets:{canbus:scene}});let raw='';const bytes=new Uint8Array(await r.blob.arrayBuffer());for(let i=0;i<bytes.length;i+=32768)raw+=String.fromCharCode(...bytes.subarray(i,i+32768));return {backgroundBase64:btoa(raw),backgroundHash:r.backgroundHash,contractHash:r.contractHash,outputSize:[r.canvas.width,r.canvas.height],transparentOwnershipSupported:true};
+})()

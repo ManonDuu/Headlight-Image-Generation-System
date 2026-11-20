@@ -1,0 +1,15 @@
+.env
+secrets/
+backups/
+__pycache__/
+*.pyc
+.DS_Store
+module-two-candidate/bridge-jobs/
+module-two-candidate/live-attempts/
+module-two-candidate/mock-bridge-jobs/
+module-three/data/
+product-retouch/data/
+*.sqlite3*
+preview-data/
+
+/archives/research-and-review.zip

@@ -1,0 +1,14 @@
+.git
+.env
+secrets
+backups
+__pycache__
+**/__pycache__
+**/*.pyc
+module-two-candidate/bridge-jobs
+module-two-candidate/live-attempts
+module-three/data
+product-retouch/data
+baseline/original-inventory.json
+
+archives

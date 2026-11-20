@@ -1,0 +1,33 @@
+(async()=>{
+ let checks=0;const ok=(v,m)=>{if(!v)throw Error(m);checks++;},reject=async(fn,m)=>{let no=false;try{await fn();}catch(e){no=true;}ok(no,m);};
+ const F=ProductCanvasFoundation,R=ReferenceWorkflow,S=InternalReferenceServer;
+ const cv=document.createElement('canvas');cv.width=cv.height=20;cv.getContext('2d').fillRect(2,2,10,10);const reference=await new Promise(r=>cv.toBlob(r));
+ enterModule('reference-reconstruction');$('mode').value='custom';$('copy').value='mIxEd LED H11';$('layout').value='auto-layout';$('tone').value='keep-reference';ref=await readOriginalImage(reference);options();
+ await $('freeze').onclick();ok(job?.state==='frozen','existing simple form actually froze');const frozen=structuredClone(job),parentBefore=JSON.stringify(await api('/api/task/'+job.id));
+ const task=await S.fromFrozen({token:session.token,frozen,reference,policy:CANVAS_TEST_POLICY,fixtureOnly:true}),id=task.status.id,store=new S.Store(session.token);
+ ok(task.status.state==='awaiting-assets','internal waits not generated');await reject(()=>task.compose(),'missing reconstruction blocks');
+ const canvas=document.createElement('canvas');[canvas.width,canvas.height]=frozen.ruleTrace.expectedDimensions;canvas.getContext('2d').fillRect(0,0,canvas.width,canvas.height);const background=await new Promise(r=>canvas.toBlob(r));
+ const plan={layoutVersion:'reference-layout-px-1',text:[{text:'mIxEd LED H11',mode:'custom',role:'title',fontSize:30,weight:600,style:'normal',lineHeightPx:40,align:'left',color:'#ffffff',box:{x:50,y:50,width:900,height:80}}]},evidence={sourceHash:frozen.sourceHash,backgroundHash:await F.sha(background),planHash:await R.hashJSON(plan),reviewer:'mock-fixture-reviewer',note:'Synthetic fixture, not reconstructed user image',sceneReconstructed:true,oldCopyAbsent:true,layoutReviewed:true,factsReviewed:true};
+ const wirePlan=structuredClone(plan);wirePlan.text.forEach(t=>delete t.mode);
+ const usage={promptTokenCount:1,candidatesTokenCount:1,totalTokenCount:2};
+ const fixtures={'layout-copy':{http:200,response:{modelVersion:'gemini-3.5-flash-lite',candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(wirePlan)}]}}],usageMetadata:usage}},background:{http:200,response:{modelVersion:'gemini-3.1-flash-image',candidates:[{finishReason:'STOP',content:{parts:[{inlineData:{mimeType:'image/png',data:canvas.toDataURL().split(',')[1]}}]}}],usageMetadata:usage}}};
+ const prepared=await store.prepareProvider(frozen.id);ok(prepared.budgetMicroUSD===20000&&!prepared.liveEnabled&&!prepared.protocolVerifiedLive,'new analysis contract explicitly unverified');
+ const proposal=await store.mockProposal(frozen.id,fixtures);ok(proposal.state==='assets-awaiting-human-review'&&proposal.steps.length===2&&proposal.mock,'two-step provider adapted not auto accepted');
+ const cached=await store.mockProposal(frozen.id,fixtures);ok(cached.steps.every(s=>s.cacheHit),'exact request cache avoids repeat');
+ await S.reviewedProposal(task,proposal,{reviewer:'mock-fixture-reviewer',note:'Synthetic only, explicit fixture review'});await task.compose();ok(task.status.state==='candidate','server stores actual fixture output');
+ const restored=await R.Workflow.open({enabled:true,store:new S.Store(session.token),id,policy:CANVAS_TEST_POLICY});ok(restored.status.outputHash===task.status.outputHash,'server authoritative restoration');
+ await restored.review({verdict:'rejected',reviewer:'fixture-reviewer',note:'Only fixture; not deliverable image'});await restored.download();
+ const sessionNow=await (await fetch('/api/session')).json();ok(sessionNow.internalReference.history.find(r=>r.id===id).state==='rejected','server session includes internal state truthfully');
+ ok(JSON.stringify(await api('/api/task/'+frozen.id))===parentBefore,'original frozen history unchanged');
+ await reject(()=>store.download(id,'wrong'),'wrong task hash download rejected');await reject(()=>store.download('00000000-0000-0000-0000-000000000000',task.status.outputHash),'other task download rejected');
+ const stale=await store.read(id);await reject(()=>store.write(stale,stale.revision-1),'CAS conflicts rejected');const tampered=structuredClone(stale);tampered.frozen.ruleTrace.selectedOptions.customCopy='altered';await reject(()=>store.write(tampered,stale.revision),'frozen config tampering rejected');
+ const pending=await S.fromFrozen({token:session.token,frozen,reference,policy:CANVAS_TEST_POLICY,fixtureOnly:true});await pending.supply({background,plan,evidence});const interrupted=await store.read(pending.status.id);interrupted.state='composing';await store.write(interrupted,interrupted.revision);
+ const inkReview=await S.fromFrozen({token:session.token,frozen,reference,policy:CANVAS_TEST_POLICY,fixtureOnly:true});await inkReview.supply({background,plan,evidence});
+ await inkReview.measureTypography([{sourceText:'mIxEd LED H11',role:'title',box:{x:0,y:0,width:20,height:20}}]);
+ ok(inkReview.status.state==='awaiting-typography-review','nontext rectangle requires recoverable review on server');
+ const storedInk=await store.read(inkReview.status.id),brokenInk=structuredClone(storedInk);brokenInk.typographyEvidence.sourceWidth=999;
+ await reject(()=>store.write(brokenInk,storedInk.revision),'evidence hash/dimensions tampering rejected');
+ globalThis.SERVER_INTERNAL_TEST={id,inkReviewId:inkReview.status.id,interruptedId:pending.status.id,outputHash:task.status.outputHash,sourceId:frozen.id};
+ const noToken=await fetch('/api/internal/reference',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'list'})});ok(noToken.status===400,'session auth enforced');
+ return {checks,fixtureOnly:true,newModelCalls:0,productionEnabled:false,...SERVER_INTERNAL_TEST,downloadName:`INTERNAL-${id}.png`};
+})()

@@ -1,0 +1,34 @@
+(async()=>{
+ const R=ReferenceWorkflow,F=ProductCanvasFoundation;let checks=0;
+ const ok=(v,m)=>{if(!v)throw Error(m);checks++;},reject=async(fn,m)=>{let failed=false;try{await fn();}catch(e){failed=true;}ok(failed,m);};
+ const reference=globalThis.WORKFLOW_REFERENCE,frozen=WORKFLOW_FROZEN,policy=CANVAS_TEST_POLICY;
+ const store=new R.Store('fixture-reference-'+crypto.randomUUID());
+ const args={enabled:true,store,reference,frozen,policy,fixtureOnly:true};
+ await reject(()=>R.Workflow.create({...args,enabled:false}),'default off');
+ await reject(()=>R.Workflow.create({...args,frozen:{...frozen,sourceHash:'bad'}}),'source mismatch');
+ const w=await R.Workflow.create(args),id=w.status.id;
+ const initialBlockers=w.status.blockers;ok(w.status.state==='awaiting-assets'&&initialBlockers.length===3,'precise missing inputs');
+ await reject(()=>w.compose(),'no assets no pretend output');await reject(()=>w.download(),'no output no download');
+ const dims=frozen.ruleTrace.expectedDimensions,c=document.createElement('canvas');c.width=dims[0];c.height=dims[1];c.getContext('2d').fillRect(0,0,c.width,c.height);const background=await new Promise(r=>c.toBlob(r));
+ const text={text:frozen.ruleTrace.selectedOptions.customCopy,mode:'custom',role:'title',fontSize:30,weight:600,style:'normal',lineHeightPx:40,align:'left',box:{x:50,y:50,width:900,height:80},color:'#ffffff'},plan={text:[text]};
+ const evidence={sourceHash:frozen.sourceHash,backgroundHash:await F.sha(background),planHash:await R.hashJSON(plan),reviewer:'programmatic-fixture',note:'Synthetic geometry only, not a reconstruction',sceneReconstructed:true,oldCopyAbsent:true,layoutReviewed:true,factsReviewed:true};
+ await reject(()=>w.supply({background,plan,evidence:{...evidence,oldCopyAbsent:false}}),'unclean background blocked');
+ const altered={text:[{...text,text:'Changed'}]};await reject(async()=>w.supply({background,plan:altered,evidence:{...evidence,planHash:await R.hashJSON(altered)}}),'custom mutation blocked');
+ await w.supply({background,plan,evidence});store.close();const resumed=await R.Workflow.open({enabled:true,store:new R.Store(store.name),id,policy});
+ ok(resumed.status.state==='ready-to-compose','persisted blobs and state restored');await resumed.compose();ok(resumed.status.state==='candidate','real local fixture output');
+ const reopened=await R.Workflow.open({enabled:true,store:new R.Store(store.name),id,policy});ok(reopened.status.outputHash===resumed.status.outputHash,'output restored and verified');
+ await reject(()=>reopened.compose(),'no automatic retry');await reopened.review({verdict:'rejected',note:'Fixture is not a real scene reconstruction',reviewer:'fixture-reviewer'});
+ await reject(()=>resumed.review({verdict:'accepted',note:'stale',reviewer:'other-window'}),'concurrent stale write blocked');
+ ok(resumed.status.state==='rejected','stale local state restored after conflict');
+ const final=await R.Workflow.open({enabled:true,store:new R.Store(store.name),id,policy});ok(final.status.state==='rejected','failed acceptance persists');await final.download();
+ ok((await store.list()).find(x=>x.id===id).review.verdict==='rejected','history shows truthful rejection');
+ const failed=await R.Workflow.create(args),badPlan={text:[{...text,box:{x:50,y:50,width:1,height:1}}]};await failed.supply({background,plan:badPlan,evidence:{...evidence,planHash:await R.hashJSON(badPlan)}});
+ await reject(()=>failed.compose(),'overflow fails local orchestration');ok(failed.status.state==='failed'&&!!failed.status.error&&!failed.status.outputHash,'explicit error no fake image');
+ const fr=await R.Workflow.open({enabled:true,store:new R.Store(store.name),id:failed.status.id,policy});ok(fr.status.state==='failed','failure recovered');await reject(()=>fr.compose(),'failed task does not auto retry');
+ const interrupted=await R.Workflow.create(args),ir=await store.read(interrupted.status.id);ir.state='composing';await store.write(ir,ir.revision);
+ const recovered=await R.Workflow.open({enabled:true,store:new R.Store(store.name),id:ir.id,policy});ok(recovered.status.state==='interrupted','interruption recovery');
+ const corrupt=await store.read(ir.id);corrupt.reference=background;await store.write(corrupt,corrupt.revision);await reject(()=>R.Workflow.open({enabled:true,store,id:ir.id,policy}),'corrupt asset blocked');
+ await reject(()=>R.Workflow.open({enabled:true,store,id,policy:{...policy,forbiddenSource:'changed'}}),'changed policy not silently applied');
+ const result={checks,fixtureOnly:true,productionEnabled:false,newModelCalls:0,compilerVersion:frozen.ruleTrace.version,states:['awaiting-assets','ready-to-compose','candidate','rejected','failed','interrupted'],downloadName:`INTERNAL-reference-${id}.png`,downloadHash:final.status.outputHash,blockers:initialBlockers,historyCount:(await store.list()).length};
+ store.close();return result;
+})()

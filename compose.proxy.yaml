@@ -1,0 +1,29 @@
+name: car-light-proxy
+services:
+  app:
+    build: .
+    image: car-light-proxy:1.0.0-proxy.1
+    network_mode: host
+    init: true
+    restart: unless-stopped
+    environment:
+      PUBLIC_ORIGIN: http://127.0.0.1:18080
+      LOCAL_LOOPBACK_HTTP: "1"
+      PROXY_HTTP_LISTEN: 127.0.0.1:18080
+      IMAGE_PROXY_CONFIG: /run/secrets/image_proxy.json
+      SYSTEM_BUDGET: "1"
+    volumes:
+      - proxy_workbench_jobs:/app/module-two-candidate/bridge-jobs
+      - proxy_workbench_attempts:/app/module-two-candidate/live-attempts
+      - proxy_listing_data:/app/module-three/data
+      - proxy_retouch_data:/app/product-retouch/data
+      - proxy_usage_data:/data
+      - ./deploy/budget.json:/app/deploy/budget.json:ro
+      - ./secrets/image-proxy.json:/run/secrets/image_proxy.json:ro
+    stop_grace_period: 30s
+volumes:
+  proxy_workbench_jobs:
+  proxy_workbench_attempts:
+  proxy_listing_data:
+  proxy_retouch_data:
+  proxy_usage_data:

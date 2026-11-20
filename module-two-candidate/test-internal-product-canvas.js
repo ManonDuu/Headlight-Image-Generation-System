@@ -1,0 +1,41 @@
+(async()=>{
+ const F=ProductCanvasFoundation,P=CANVAS_TEST_POLICY;let checks=0;
+ const ok=(v,m)=>{if(!v)throw Error(m);checks++;};
+ const reject=async(fn,label)=>{let failed=false;try{await fn();}catch(e){failed=true;}ok(failed,label);};
+ const fixture=async(w,h,draw)=>{const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'));return new Promise(r=>c.toBlob(r,'image/png'));};
+ const src=await fixture(10,6,c=>{c.fillStyle='#ff0000';c.fillRect(0,0,10,6);c.fillStyle='#0000ff';c.fillRect(5,1,3,4);});
+ const mask=await fixture(10,6,c=>{c.fillStyle='#fff';c.fillRect(1,1,8,4);});
+ const hash=await F.sha(src),mh=await F.sha(mask);
+ await reject(()=>new F.Session({policy:P}).load(src,{sourceHash:hash}),'gate default off');
+ const s=new F.Session({enabled:true,policy:P});await reject(()=>s.load(src,{sourceHash:'bad'}),'source hash');await s.load(src,{sourceHash:hash,mask,maskHash:mh});
+ await reject(()=>s.load(src,{sourceHash:hash}),'immutable source');
+ await reject(()=>s.transform({x:0,y:0,scaleX:1,scaleY:2,rotation:0}),'nonuniform rejected');
+ await reject(()=>s.transform({x:0,y:0,scale:-1,rotation:0}),'mirror rejected');
+ s.transform({x:2,y:3,scale:1,rotation:0});await reject(()=>s.exportPNG({width:20,height:20}),'uncleared background blocks');
+ await s.layers({backgroundConfirmedClean:true});let r=await s.exportPNG({width:20,height:20});
+ const pixels=async blob=>{const b=await createImageBitmap(blob),c=document.createElement('canvas');c.width=b.width;c.height=b.height;const ctx=c.getContext('2d');ctx.drawImage(b,0,0);return {data:ctx.getImageData(0,0,c.width,c.height).data,w:c.width,h:c.height};};
+ let px=await pixels(r.blob);const at=(x,y)=>Array.from(px.data.slice((y*px.w+x)*4,(y*px.w+x)*4+4));
+ ok(at(2,3)[3]===0,'mask transparent edge');ok(at(3,4).join()==='255,0,0,255','original red pixels');ok(at(7,4).join()==='0,0,255,255','original blue pixels');
+ ok(await F.sha(src)===hash&&r.manifest.sourceHash===hash&&r.manifest.maskHash===mh,'provenance');ok(!r.manifest.resampled&&!r.manifest.productIdentityAccepted,'no false acceptance');
+ s.transform({x:12,y:2,scale:1,rotation:90});r=await s.exportPNG({width:20,height:20});ok(r.manifest.resampled&&r.manifest.transform.rotation===90,'rotation recorded');
+ s.transform({x:1,y:1,scale:2,rotation:0});r=await s.exportPNG({width:24,height:16});ok(r.manifest.transform.scale===2,'uniform scaling');
+ s.transform({x:0,y:0,scale:3,rotation:0});await reject(()=>s.exportPNG({width:20,height:20}),'crop blocked');s.transform({x:2,y:3,scale:1,rotation:0});
+ // Transparent upload padding may extend beyond the output; visible pixels may not.
+ s.transform({x:-1,y:-1,scale:1,rotation:0});const tight=await s.exportPNG({width:8,height:4});
+ ok(tight.manifest.visibleSourceBounds.width===8&&tight.manifest.visibleSourceBounds.height===4,'visible bounds ignore transparent padding');
+ s.transform({x:-2,y:-1,scale:1,rotation:0});await reject(()=>s.exportPNG({width:8,height:4}),'visible clipping still blocked');
+ const faint={width:3,height:1,data:new Uint8ClampedArray([255,255,255,1,100,100,100,255,255,255,255,1])};
+ ok(F.visibleBounds(faint).width===3,'one-alpha silver edge protected');
+ s.transform({x:2,y:3,scale:1,rotation:0});
+ const bg=await fixture(20,20,c=>{c.fillStyle='#00ff00';c.fillRect(0,0,20,20);});await s.layers({background:bg,shadow:bg,backgroundConfirmedClean:true});r=await s.exportPNG({width:20,height:20});px=await pixels(r.blob);ok(at(3,4).join()==='255,0,0,255','background/shadow cannot repaint product');
+ ok(F.copyText('mIxEd LED',{mode:'custom',role:'title'},P)==='mIxEd LED','custom exact case');
+ ok(F.copyText('INTEGRATED HEAT DISSIPATION',{mode:'ai-rewrite',role:'title'},P)==='Integrated Heat Dissipation','title case');
+ ok(F.copyText('COOLING LED H11 60W',{mode:'ai-rewrite',role:'subtitle'},P)==='Cooling LED H11 60W','subtitle protected units');
+ ok(F.copyText('CANBUS READY',{mode:'ai-rewrite',role:'subtitle'},P)==='CANBUS ready','confirmed CANBUS acronym preserved');
+ ok(F.copyText('Mixed BODY',{mode:'ai-rewrite',role:'body'},P)==='Mixed BODY','no invented body case');
+ await reject(()=>F.copyText('New HEADLIGHTS',{mode:'custom',role:'title'},P),'forbidden conflict');
+ await s.layers({backgroundConfirmedClean:true,text:[{text:'Safe words',mode:'custom',role:'title'}]});await reject(()=>s.exportPNG({width:20,height:20}),'missing Inter blocks text rendering');
+ await s.layers({backgroundConfirmedClean:true});r=await s.exportPNG({width:20,height:20});await reject(()=>F.download({blob:r.blob,manifest:{outputHash:'bad'}}),'tampered download blocked');
+ await F.download(r,'INTERNAL-fixture.png');
+ return {checks,manifest:r.manifest,fixtureOnly:true,productionEnabled:F.productionEnabled,newModelCalls:0};
+})()

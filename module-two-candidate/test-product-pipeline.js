@@ -1,0 +1,35 @@
+(async()=>{
+ const F=ProductCanvasFoundation,P=ProductPipeline;let checks=0;
+ const ok=(v,m)=>{if(!v)throw Error(m);checks++;};
+ const reject=async(fn,m)=>{let failed=false;try{await fn();}catch(e){failed=true;}ok(failed,m);};
+ const fixture=async(draw)=>{const c=document.createElement('canvas');c.width=c.height=12;draw(c.getContext('2d'));return new Promise(r=>c.toBlob(r));};
+ const pixels=async(blob)=>{const b=await createImageBitmap(blob),c=document.createElement('canvas');c.width=b.width;c.height=b.height;const ctx=c.getContext('2d');ctx.drawImage(b,0,0);b.close();return ctx.getImageData(0,0,c.width,c.height).data;};
+ const make=async b=>{const p=new P.Pipeline({enabled:true,policy:CANVAS_TEST_POLICY});await p.load(b,await F.sha(b));return p;};
+ const alpha=await fixture(c=>{c.fillStyle='#73529b';c.fillRect(3,3,6,6);});
+ await reject(()=>new P.Pipeline({policy:CANVAS_TEST_POLICY}).load(alpha,F.sha(alpha)),'default off');
+ const p=await make(alpha),hash=await F.sha(alpha);ok(p.status.maskReady&&p.status.maskOrigin==='original-alpha','alpha directly reused');
+ await reject(()=>p.load(alpha,hash),'immutable source');await reject(()=>p.compose(),'missing plans blocks');
+ const plan={width:12,height:12,x:0,y:0,scale:1,rotation:0},review={reviewer:'programmatic-fixture',note:'fixture known geometry',sourceHash:hash};
+ await reject(()=>p.position(plan,{}),'position evidence required');p.position(plan,review);
+ await reject(()=>p.preflight([{text:'Safe',mode:'custom',role:'title',fontSize:16,weight:400,lineHeightPx:20,align:'left',box:{x:0,y:0,width:12,height:12}}]),'text conflict fails preflight');
+ await p.preflight([]);ok(p.status.state==='awaiting-background','waiting background');await reject(()=>p.compose(),'no fake background success');
+ const bg=await fixture(c=>{c.fillStyle='#142536';c.fillRect(0,0,12,12);}),bh=await F.sha(bg);
+ await reject(()=>p.background(bg,{...review,backgroundHash:bh}),'clearance evidence required');
+ await reject(()=>p.background(bg,{...review,backgroundHash:'wrong',oldProductAbsent:true}),'background hash required');
+ await p.background(bg,{...review,backgroundHash:bh,oldProductAbsent:true});const r=await p.compose(),d=await pixels(r.blob),i=(4*12+4)*4;
+ ok(Array.from(d.slice(i,i+4)).join()==='115,82,155,255','opaque original RGB preserved');ok(await F.sha(alpha)===hash&&r.manifest.pipeline.originalBlobUnchanged,'original blob unchanged');
+ ok(r.manifest.pipeline.maskOrigin==='original-alpha'&&!r.manifest.productIdentityAccepted,'no invented identity acceptance');await p.download('INTERNAL-pipeline-fixture.png');ok(p.status.state==='download-dispatched','download state');
+ p.position(plan,review);await reject(()=>p.download(),'plan change invalidates result');
+ const white=await fixture(c=>{c.fillStyle='white';c.fillRect(0,0,12,12);});const w=await make(white);ok(!w.status.maskReady&&!w.candidate().blob,'all white ambiguous');await reject(()=>w.compose(),'all white blocked');
+ const silver=await fixture(c=>{c.fillStyle='white';c.fillRect(0,0,12,12);c.fillStyle='#aaa';c.fillRect(3,3,6,6);c.fillStyle='white';c.fillRect(5,5,2,2);});
+ const s=await make(silver),candidate=s.candidate(),m=await pixels(candidate.blob);
+ ok(!s.status.maskReady&&candidate.requiresConfirmation,'silver requires review');ok(m[(5*12+5)*4+3]===255,'interior white hole/highlight retained');ok(m[3]===0,'only connected background removed');
+ await reject(()=>s.confirmMask({...review,maskHash:candidate.maskHash}),'cross-source review rejected');
+ await reject(()=>s.preflight([]),'unreviewed candidate blocked');
+ s.confirmMask({reviewer:'fixture-review',note:'synthetic only',sourceHash:await F.sha(silver),maskHash:candidate.maskHash});ok(s.status.maskReady,'hash bound explicit mask approval');
+ const touching=await fixture(c=>{c.fillStyle='white';c.fillRect(0,0,12,12);c.fillStyle='#aaa';c.fillRect(3,3,6,6);c.fillStyle='white';c.fillRect(5,0,2,7);});const t=await make(touching);ok(!t.status.maskReady&&t.status.risks.some(x=>x.includes('may be removed')),'white product connected to background never auto approved');
+ const complex=await fixture(c=>{c.fillStyle='#283a94';c.fillRect(0,0,12,12);c.fillStyle='#bbb';c.fillRect(3,3,6,6);});const x=await make(complex);ok(x.status.maskOrigin==='unsupported-background'&&!x.candidate().blob,'complex background rejected');
+ const partial=await fixture(c=>{c.fillStyle='rgba(100,150,200,.5)';c.fillRect(3,3,6,6);});const a=await make(partial);ok(a.status.maskOrigin==='original-alpha'&&a.status.risks.some(v=>v.includes('Partial alpha')),'partial alpha explicitly flagged');
+ const empty=await fixture(()=>{});await reject(()=>make(empty),'empty transparent rejected');
+ return {checks,fixtureOnly:true,newModelCalls:0,productionEnabled:false,downloadHash:r.manifest.outputHash,states:p.status.history,maskCandidate:{sourceHash:candidate.sourceHash,maskHash:candidate.maskHash,algorithm:candidate.algorithm,risks:candidate.risks}};
+})()

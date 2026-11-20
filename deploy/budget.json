@@ -1,0 +1,7 @@
+{
+  "timezone": "America/Los_Angeles",
+  "daily_limit_usd": 10,
+  "monthly_limit_usd": 300,
+  "per_call_limit_usd": 1,
+  "reserves_usd": {"reference": 0.26, "replacement": 0.27, "listing": 0.50, "retouch": 0.50}
+}

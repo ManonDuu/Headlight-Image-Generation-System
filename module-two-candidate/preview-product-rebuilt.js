@@ -1,0 +1,13 @@
+(async()=>{
+ const root='/diagnostics/product-rebuilt/',c=await(await fetch(root+'contract.json')).json(),p=await(await fetch(root+'proposal.json')).json(),f=await(await fetch(root+'frozen.json')).json(),scene=await(await fetch(root+'canbus-clean-rebuilt-background.png')).blob(),product=await(await fetch('/diagnostics/product-real-validation/product.png')).blob(),reference=await(await fetch('/assets/listing-canbus-reference/reference.png')).blob(),F=ProductCanvasFoundation,L=LocalProductCompose;
+ await InterTextFoundation.load({normal:await(await fetch('/assets/fonts/inter-4.1/InterVariable.ttf')).blob(),italic:await(await fetch('/assets/fonts/inter-4.1/InterVariable-Italic.ttf')).blob()});
+ const audit=await(await fetch('/reference-anchor-audits/'+f.binding.sourceHash+'/'+await DeterministicDecoration.hash(p.layout)+'.json')).json(),policy={modes:{'preserve-reference':{title:'Title Case',subtitle:'Sentence case',brand:'UPPERCASE'}},forbiddenSource:'headlights?'};
+ await ProductAutoCompose.applyTrustedAnchors(p,p.layout,audit,reference,f.binding.sourceHash,1856,2304,policy);ProductAutoCompose.prepareText(p.layout.text,{width:1856,height:2304,mode:'keep-reference',productSlot:p.productSlot,policy});
+ const asset=await L.prepare(product),placement=ProductAutoCompose.fitVisible(F.visibleBounds(asset.original,asset.alpha),p.productSlot),shadow=ProductAutoCompose.contactShadow(asset,1856,2304,placement.x,placement.y,placement.scale),images={},encode=async blob=>{let s='';const b=new Uint8Array(await blob.arrayBuffer());for(let i=0;i<b.length;i+=32768)s+=String.fromCharCode(...b.subarray(i,i+32768));return btoa(s);};
+ const sourceLayout=await(await fetch(root+'proposal.json')).json();
+ for(const name of ['review-candidate']){
+  const contract=structuredClone(c);if(name==='support-map')Object.assign(contract.comparisonGroups[0],{sharedUniformScale:2,sharedTranslationInPanelCoordinates:{x:-90,y:-160}});
+  const r=await DeterministicDecoration.render({contract,layout:sourceLayout.layout,sourceHash:c.sourceHash,assets:{canbus:scene}}),canvas=L.canvas(1856,2304),ctx=canvas.getContext('2d'),bg=await createImageBitmap(r.blob);ctx.drawImage(bg,0,0);bg.close();ctx.drawImage(shadow.layer,0,0);ctx.save();ctx.translate(placement.x,placement.y);ctx.scale(placement.scale,placement.scale);ctx.drawImage(asset.c,0,0);ctx.restore();for(const t of p.layout.text)InterTextFoundation.draw(ctx,InterTextFoundation.layout(t,policy,F.copyText));images[name]=await encode(await L.png(canvas));
+ }
+ return {images,placement,shadowBounds:shadow.bounds,scope:'Non-deliverable geometry preview; no acceptance gate bypassed or cache installed.'};
+})()

@@ -1,0 +1,13 @@
+(async()=>{
+ const get=async n=>await(await fetch('/diagnostics/real-scenes/'+n+'.json')).json(),contract=await get('contract'),proposal=await get('proposal'),frozen=await get('frozen');
+ const assets=Object.fromEntries(await Promise.all(['led','halogen'].map(async id=>[id,await(await fetch('/diagnostics/real-scenes/scene-'+id+'.png')).blob()])));
+ const r=await DeterministicDecoration.render({contract,layout:proposal.layout,sourceHash:frozen.binding.sourceHash,assets});
+ const ctx=r.canvas.getContext('2d'),pixel=(x,y)=>Array.from(ctx.getImageData(Math.floor(x),Math.floor(y),1,1).data),observed=[];
+ const rgb=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));
+ function scan(axis,fixed,lo,hi,color){const wanted=rgb(color),hits=[];for(let n=Math.floor(lo);n<=Math.ceil(hi);n++){const p=axis==='x'?pixel(n,fixed):pixel(fixed,n);if(wanted.every((v,i)=>Math.abs(v-p[i])<8)&&p[3]===255)hits.push(n);}if(!hits.length)throw Error('border scan has no pixels');return [Math.min(...hits),Math.max(...hits)];}
+ for(const p of contract.panels){const b=p.outerRect,midX=b.x+b.width/2,midY=b.y+b.height/2,color=p.borderStyle.color,bw=p.borderStyle.width;observed.push({id:p.id,left:scan('x',midY,b.x-2,b.x+bw+2,color),right:scan('x',midY,b.x+b.width-bw-2,b.x+b.width+2,color),top:scan('y',midX,b.y-2,b.y+bw+2,color),bottom:scan('y',midX,b.y+b.height-bw-2,b.y+b.height+2,color)});}
+ const observedLabels=contract.labelContainers.filter(l=>l.panelId).map(l=>{const b=l.rect,c=l.fillStyle;return {id:l.id,left:scan('x',b.y+b.height/2,b.x-1,b.x+1,c),right:scan('x',b.y+b.height/3,b.x+b.width-1,b.x+b.width+1,c),top:scan('y',b.x+b.width/2,b.y-1,b.y+1,c),bottom:scan('y',b.x+b.width/3,b.y+b.height-1,b.y+b.height+1,c)};});
+ const evidence=contract.panels.map(p=>{const g=contract.comparisonGroups.find(g=>g.id===p.comparisonGroupId),a=contract.sceneAssets.find(a=>a.id===p.sceneAssetId);return {panel:p.id,bounds:a.protectedEvidenceBounds.map(e=>({x:p.sceneViewportRect.x+g.sharedTranslationInPanelCoordinates.x+e.x*g.sharedUniformScale,y:p.sceneViewportRect.y+g.sharedTranslationInPanelCoordinates.y+e.y*g.sharedUniformScale,width:e.width*g.sharedUniformScale,height:e.height*g.sharedUniformScale}))};});
+ const toBase64=async b=>{const a=new Uint8Array(await b.arrayBuffer());let s='';for(let i=0;i<a.length;i+=32768)s+=String.fromCharCode(...a.subarray(i,i+32768));return btoa(s);};
+ return {backgroundBase64:await toBase64(r.blob),backgroundHash:r.backgroundHash,contractHash:r.contractHash,observedBorders:observed,observedLabels,mappedEvidence:evidence,sourceHash:frozen.binding.sourceHash,layoutHash:await DeterministicDecoration.hash(proposal.layout),outputSize:[r.canvas.width,r.canvas.height]};
+})()

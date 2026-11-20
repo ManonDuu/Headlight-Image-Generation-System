@@ -1,0 +1,52 @@
+name: car-light-system
+services:
+  app:
+    build: .
+    image: car-light-system:1.0.0-rc.1
+    restart: unless-stopped
+    init: true
+    environment:
+      PUBLIC_ORIGIN: https://${DOMAIN:?Run python3 scripts/setup.py first}
+    secrets:
+      - gemini_key
+    volumes:
+      - workbench_jobs:/app/module-two-candidate/bridge-jobs
+      - workbench_attempts:/app/module-two-candidate/live-attempts
+      - listing_data:/app/module-three/data
+      - retouch_data:/app/product-retouch/data
+      - usage_data:/data
+      - ./deploy/budget.json:/app/deploy/budget.json:ro
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  gateway:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?Run setup first}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    secrets:
+      - access
+    depends_on:
+      app: {condition: service_healthy}
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+secrets:
+  gemini_key: {file: ./secrets/gemini_key}
+  access: {file: ./secrets/access}
+volumes:
+  workbench_jobs:
+  workbench_attempts:
+  listing_data:
+  retouch_data:
+  usage_data:
+  caddy_data:
+  caddy_config:

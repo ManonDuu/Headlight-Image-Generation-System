@@ -1,0 +1,26 @@
+{
+  "systemVersion": "1.0.0-rc.1",
+  "status": "linux-validated-awaiting-target-server-live-acceptance",
+  "modules": {
+    "reference": "car-light-direct-20261021.20",
+    "replacement": "car-light-product-20261022.10",
+    "listing": "E31-all-category-trace-audit-20261026 + UI1",
+    "retouch": "retouch-rules-20261023.35"
+  },
+  "validation": {
+    "offlinePassed": 113,
+    "linuxDocker": "passed",
+    "http": "four-module-prepare-and-restart-passed",
+    "paidImageCalls": 0,
+    "targetServer": "not-tested",
+    "linuxTestsPassed": 114,
+    "linuxWorkflow": "https://github.com/ManonDuu/Manon-Private/actions/runs/40341322271",
+    "validatedCodeCommit": "c84a4e2c35164093015eb0f5e5aabd1e3c406830"
+  },
+  "repository": {
+    "target": "ManonDuu/Manon-Private",
+    "uploaded": true,
+    "reason": "user-authorized-private-repository-delivery"
+  },
+  "originalRuntimeModified": false
+}

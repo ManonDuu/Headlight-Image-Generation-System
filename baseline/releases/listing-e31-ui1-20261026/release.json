@@ -1,0 +1,15 @@
+{
+  "name": "整套附图生成 E31｜界面精简补丁 1",
+  "baseRelease": "listing-e31-20261026",
+  "scope": "Only remove explanations from pre-generation selling-point preview cards and hide the unused free-simulation button; all other UI and generation rules unchanged",
+  "sourceHashes": {
+    "module-three/static/app.js": "b2a1014e0bd390133718f71d7f55175294d81ace9696c9f3e3e1927b6e87036c",
+    "module-three/static/index.html": "c5367f7998f05650a615c7870709d53851c9ee1578621b17bd319774a5a4b77e"
+  },
+  "runtimeStaticFilesVerified": true,
+  "checks": [
+    "Only index.html and app.js differ from frozen baseline",
+    "backend.js restored byte-for-byte to frozen baseline"
+  ],
+  "restore": "Use ui-before.zip to restore original interface; base frozen snapshot remains intact"
+}

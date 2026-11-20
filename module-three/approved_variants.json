@@ -1,0 +1,134 @@
+{
+  "illumination": [
+    {
+      "id": "road-states",
+      "name": "full-scene-comparison",
+      "structure": "Stacked matched-road comparison with NO separate header: the upper OUR road scene occupies about 72 percent of the canvas, including title text over its own sky/foliage. Keep about 54 percent of the entire canvas as unobscured OUR road evidence after text. The lower comparison scene occupies about 28 percent. Both panels extend to the edges with no white gutters or pale poster backing. Same camera, road, landmarks, materials and arrow directions. Place each identity inside its own scene and benefit labels only on OUR evidence. Title/subtitle overlay the upper scene, never a blank full-width rectangle. Keep the vanishing point, verge and distant landmarks visible; text may move but cannot push the hero below the baseline in visual dominance.",
+      "points": [
+        "distance",
+        "verge",
+        "detail"
+      ]
+    },
+    {
+      "id": "hero-baseline",
+      "name": "hero-with-baseline",
+      "structure": "Large LED road scene 75 percent, upper-left small but readable Halogen comparison window 25 percent of scene area showing the EXACT same entire scene at same perspective. One low branch at outer right verge, never move it between states. Keep LED labels on main scene. No other insets.",
+      "points": [
+        "distance",
+        "obstacle",
+        "verge"
+      ]
+    },
+    {
+      "id": "target-detail",
+      "name": "target-comparison",
+      "structure": "Upper half two large side-by-side close views of exactly the same distant bend sign and roadside reflector: left dim warm halogen, right brighter white LED. Lower half ONE wide LED road context locating that same sign in the distance. Sharp lens in all views; visibility differs through illumination, not artificial blur. Main title above. Never put LED benefit labels in halogen region.",
+      "points": [
+        "detail",
+        "markings",
+        "distance"
+      ]
+    }
+  ],
+  "beam": [
+    {
+      "id": "overhead-field",
+      "name": "overhead-field",
+      "structure": "True elevated oblique view looking DOWN at road surface, not eye-level driver view. ONE unbranded vehicle matching supplied fitment where identifiable, otherwise a generic vehicle small near lower edge shows approximate scale; continuous broad white illumination reaches ahead across lane and verges. Ground dominates, sky absent. Soft natural fading with distance, not a spotlight circle, striped field, laser or precise measured cutoff. No insets.",
+      "points": [
+        "width",
+        "continuity",
+        "edge"
+      ]
+    },
+    {
+      "id": "near-far",
+      "name": "perspective-continuity",
+      "structure": "One natural driver-perspective road scene with little sky. Near pavement at bottom connects continuously through middle road to the distant bend. Broad illumination with natural falloff and visible texture, no bright bars or isolated spots. Benefit annotations follow evidenceMap, NOT an evenly spaced near/middle/far label column. No side strip or duplicate windows.",
+      "points": [
+        "near_far",
+        "continuity",
+        "texture"
+      ]
+    },
+    {
+      "id": "lateral-surface",
+      "name": "lateral-surface",
+      "structure": "Low oblique view across textured pavement and a natural green verge at blue hour. The off-frame light source is behind the near camera edge: a broad bright continuous field connects the visible foreground to the wide middle ground, with a softly rounded perimeter. Pavement fills most of the canvas, little sky. No vehicle or detached spotlight islands. One integrated close detail of the SAME illuminated surface if useful; no decorative bottom strip.",
+      "points": [
+        "width",
+        "edge",
+        "texture"
+      ]
+    }
+  ],
+  "tone": [
+    {
+      "id": "surface-color",
+      "name": "surface-color-comparison",
+      "structure": "Two equal vertical FULL photographs of identical pale paving stones, green leaves and a white parking stripe, seen from same viewpoint. Left Halogen warm and dim, right the supplied brand LED bright white but textured. Ambient background exposure identical. No black sky dominance, no vehicle or bulb.",
+      "points": [
+        "supplied_light_color",
+        "markings",
+        "surface_colors"
+      ]
+    },
+    {
+      "id": "lamp-appearance",
+      "name": "lamp-and-surface",
+      "structure": "Large cropped headlamp of unbranded fitment-matched vehicle, natural cool-white illumination with visible lens internals, no starburst. Warm wood or brick garage and green shrubs in background. ONE integrated inset shows white-lit pale paving stone from same scene. No comparative panel and no whole bulb.",
+      "points": [
+        "supplied_light_color",
+        "lamp_appearance",
+        "surface_colors"
+      ]
+    },
+    {
+      "id": "color-on-materials",
+      "name": "illuminated-materials",
+      "structure": "A cinematic close roadside still-life of green foliage, brown wood fence and pale gravel, all illuminated by one broad off-camera neutral-cool-white headlamp source at blue hour. These are actual scene objects not swatches. One coherent richly colored photographic scene, no headlamp visible, no comparator, no card grid. Use only the supplied readable labels in the selected theme color adjacent to their mapped materials; do not add labels to reach a fixed count. No invented color accuracy index.",
+      "points": [
+        "supplied_light_color",
+        "surface_colors",
+        "detail"
+      ]
+    }
+  ],
+  "protection": [
+    {
+      "id": "weather-mosaic",
+      "name": "weather-mosaic",
+      "structure": "四环境场景为主，不出现灯泡，不出现四辆重复汽车；雨、雪、雾、尘各有自然材质与环境，最多一个去标识皮卡。四个大区域大小有变化，一个标题统领。",
+      "points": [
+        "IP68",
+        "rain",
+        "snow",
+        "fog",
+        "dust"
+      ]
+    },
+    {
+      "id": "weather-hero",
+      "name": "weather-hero",
+      "structure": "一幅真实雨中皮卡使用场景占画面大部分，无独立灯泡；蓝灰雨天、绿色树叶、白色车灯。辅助三个大号线形图标和短标签表达雪、雾、尘，不加四个照片框。不得表示穿雾提升或低温等级。",
+      "points": [
+        "IP68",
+        "rain",
+        "snow",
+        "fog",
+        "dust"
+      ]
+    },
+    {
+      "id": "protection-detail",
+      "name": "protection-detail",
+      "structure": "原产品密封圈和银色表面作为微距主体；水滴表面与干燥灰尘环境分别占一个有意义区域，表达水尘防护，不加四天气缩略图，不画浸水，不虚构内部密封剖面。",
+      "points": [
+        "water",
+        "dust",
+        "seal"
+      ]
+    }
+  ]
+}
